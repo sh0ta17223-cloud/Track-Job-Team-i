@@ -1,4 +1,5 @@
 import streamlit as st
+from home import render_home
 
 # ── ページ設定 ──
 st.set_page_config(
@@ -21,6 +22,13 @@ st.markdown("""
   .stApp {
     background-color: #F0F4FF;
   }
+            
+
+    /* 日付ボタンの改行を有効化 */
+div[data-testid="stHorizontalBlock"] button {
+  white-space: pre-line !important;
+  line-height: 1.4 !important;
+}
 
   /* ヘッダー */
   .app-header {
@@ -114,15 +122,8 @@ tab_home, tab_register, tab_profile = st.tabs([
 ])
 
 # ── 各画面（中身はこれから作る） ──
-
 with tab_home:
-    st.markdown("""
-    <div class="placeholder">
-      <div style="font-size:2.5rem">🏠</div>
-      <h2>ホーム画面</h2>
-      <p>ステップ2で作成します。<br>出社メンバーの一覧がここに表示されます。</p>
-    </div>
-    """, unsafe_allow_html=True)
+    render_home()
 
 with tab_register:
     st.markdown("""
