@@ -1,5 +1,7 @@
 import streamlit as st
 from home import render_home
+from register import render_register
+from profile import render_profile
 
 # ── ページ設定 ──
 st.set_page_config(
@@ -11,7 +13,7 @@ st.set_page_config(
 # ── カスタムCSS ──
 st.markdown("""
 <style>
-  /*フォントの設定*/ 
+  /* フォント */
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
   html, body, [class*="css"] {
@@ -22,13 +24,21 @@ st.markdown("""
   .stApp {
     background-color: #F0F4FF;
   }
-            
 
-    /* 日付ボタンの改行を有効化 */
-div[data-testid="stHorizontalBlock"] button {
-  white-space: pre-line !important;
-  line-height: 1.4 !important;
-}
+  /* 日付ボタンの改行を有効化 */
+  div[data-testid="stHorizontalBlock"] button {
+    white-space: pre-line !important;
+    line-height: 1.4 !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+  }
+
+  div[data-testid="stHorizontalBlock"] button p {
+    white-space: pre-line !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    margin: 0 !important;
+  }
 
   /* ヘッダー */
   .app-header {
@@ -56,10 +66,13 @@ div[data-testid="stHorizontalBlock"] button {
     background: white;
     color: #4A90D9;
     border-radius: 50%;
-    width: 38px; height: 38px;
+    width: 38px;
+    height: 38px;
     display: inline-flex;
-    align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.85rem;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
 
@@ -87,7 +100,49 @@ div[data-testid="stHorizontalBlock"] button {
   .stTabs [data-baseweb="tab-highlight"] { display: none; }
   .stTabs [data-baseweb="tab-border"]    { display: none; }
 
-  /* プレースホルダー */
+  /* 共通 */
+  .section-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #333;
+    margin: 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .member-count {
+    background: #4A90D9;
+    color: white;
+    border-radius: 20px;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+  }
+  .tag-chip {
+    font-size: 0.68rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #aaa;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .empty-state p {
+    font-size: 0.85rem;
+    line-height: 1.7;
+    margin-top: 0.5rem;
+  }
   .placeholder {
     background: white;
     border-radius: 20px;
@@ -97,11 +152,17 @@ div[data-testid="stHorizontalBlock"] button {
     margin-top: 1rem;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   }
-  .placeholder h2 { color: #333; margin: 0.75rem 0 0.5rem; font-size: 1.1rem; }
-  .placeholder p  { font-size: 0.85rem; line-height: 1.7; }
+  .placeholder h2 {
+    color: #333;
+    margin: 0.75rem 0 0.5rem;
+    font-size: 1.1rem;
+  }
+  .placeholder p {
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
 </style>
 """, unsafe_allow_html=True)
-
 
 # ── ヘッダー ──
 st.markdown("""
@@ -121,78 +182,11 @@ tab_home, tab_register, tab_profile = st.tabs([
     "👤 プロフィール",
 ])
 
-# ── 各画面（中身はこれから作る） ──
 with tab_home:
     render_home()
 
 with tab_register:
-    st.markdown("""
-    <div class="placeholder">
-      <div style="font-size:2.5rem">📅</div>
-      <h2>出社登録画面</h2>
-      <p>ステップ3で作成します。<br>カレンダーで複数日を選んで出社予定を登録できます。</p>
-    </div>
-    """, unsafe_allow_html=True)
+    render_register()
 
 with tab_profile:
-    st.title("プロフィール設定")
-
-    left, right = st.columns([2, 1])
-
-    with left:
-        st.subheader("プロフィール登録")
-
-        with st.container(border=True):
-            name = st.text_input("名前")
-            dept = st.text_input("部署")
-            color = st.color_picker("アバターカラー", "#D96A2B")
-
-            tags = st.pills(
-                "デフォルトの目的タグ（出社登録時に自動選択）",
-                ["📦 ランチ可能", "💬 雑談歓迎", "🎯 作業メイン", "☕ コーヒー休憩"],
-                selection_mode="multi",
-                default=["💬 雑談歓迎"]
-            )
-
-            if st.button("保存", width="stretch"):
-                st.success("保存しました")
-
-    avatar_text = name[0] if name else "？"
-
-    with right:
-        st.subheader("プレビュー")
-
-        html = f"""
-<div style="
-    border: 1px solid #d1d5db;
-    border-radius: 16px;
-    padding: 24px;
-    background-color: #f9fafb;
-">
-    <div style="
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        background-color: {color};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 56px;
-        font-weight: bold;
-        color: white;
-        margin: 0 auto 24px auto;
-    ">
-        {avatar_text}
-    </div>
-    <p style="font-size: 18px; margin: 12px 0;">
-        <strong>名前:</strong> {name if name else "未入力"}
-    </p>
-    <p style="font-size: 18px; margin: 12px 0;">
-        <strong>部署:</strong> {dept if dept else "未入力"}
-    </p>
-    <p style="font-size: 18px; margin: 12px 0;">
-        <strong>タグ:</strong> {", ".join(tags) if tags else "未選択"}
-    </p>
-</div>
-"""
-        st.markdown(html, unsafe_allow_html=True)
+    render_profile()
