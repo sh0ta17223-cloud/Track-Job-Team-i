@@ -1,12 +1,12 @@
 import streamlit as st
-from data import TAG_OPTIONS, get_profile, init_data, save_profile
+from storage import save_profile
+from db import save_profile
 
 
 def render_profile():
-    init_data()
-    profile = get_profile()
-
     st.title("プロフィール設定")
+
+    profile = st.session_state.profile
 
     left, right = st.columns([2, 1])
 
@@ -16,23 +16,28 @@ def render_profile():
         with st.container(border=True):
             name = st.text_input("名前", value=profile["name"])
             dept = st.text_input("部署", value=profile["dept"])
-            color = st.color_picker("アバターカラー", value=profile["color"])
+            color = st.color_picker("アバターカラー", profile["color"])
 
             tags = st.pills(
                 "デフォルトの目的タグ（出社登録時に自動選択）",
-                TAG_OPTIONS,
+                ["📦 ランチ可能", "💬 雑談歓迎", "🎯 作業メイン", "☕ コーヒー休憩"],
                 selection_mode="multi",
-                default=profile["tags"],
+                default=profile["tags"]
             )
 
-            if st.button("保存", width="stretch"):
-                if not name.strip() or not dept.strip() or not tags:
-                    st.warning("すべての項目を入力してから保存してください。")
-                else:
-                    save_profile(name, dept, color, tags)
-                    st.success("プロフィールを保存しました")
+            if st.button("保存", use_container_width=True):
+                st.session_state.profile = {
+                    "name": name,
+                    "dept": dept,
+                    "color": color,
+                    "tags": tags
+                }
+                save_profile(st.session_state.profile)
+                st.success("保存しました")
+                st.rerun()
 
-    avatar_text = name[0] if name else "？"
+    current = st.session_state.profile
+    avatar_text = current["name"][0] if current["name"] else "？"
 
     with right:
         st.subheader("プレビュー")
@@ -48,7 +53,7 @@ def render_profile():
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        background-color: {color};
+        background-color: {current["color"]};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -60,13 +65,13 @@ def render_profile():
         {avatar_text}
     </div>
     <p style="font-size: 18px; margin: 12px 0;">
-        <strong>名前:</strong> {name if name else "未入力"}
+        <strong>名前:</strong> {current["name"] if current["name"] else "未入力"}
     </p>
     <p style="font-size: 18px; margin: 12px 0;">
-        <strong>部署:</strong> {dept if dept else "未入力"}
+        <strong>部署:</strong> {current["dept"] if current["dept"] else "未入力"}
     </p>
     <p style="font-size: 18px; margin: 12px 0;">
-        <strong>タグ:</strong> {", ".join(tags) if tags else "未選択"}
+        <strong>タグ:</strong> {", ".join(current["tags"]) if current["tags"] else "未選択"}
     </p>
 </div>
 """
