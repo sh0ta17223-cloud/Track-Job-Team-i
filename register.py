@@ -1,18 +1,25 @@
 import streamlit as st
 import calendar
 from datetime import date
+from data import (
+    TAG_OPTIONS,
+    add_attendance,
+    delete_attendance,
+    get_attendance_list,
+    get_profile,
+    init_data,
+)
 
 
 def render_register():
+    init_data()
+    profile = get_profile()
     today = date.today()
     year = today.year
     month = today.month
 
     if "selected_dates" not in st.session_state:
         st.session_state.selected_dates = []
-
-    if "attendance_list" not in st.session_state:
-        st.session_state.attendance_list = []
 
     time_options = [f"{h:02d}:00" for h in range(9, 22)]
 
@@ -25,28 +32,30 @@ def render_register():
     if "tags_widget_key" not in st.session_state:
         st.session_state.tags_widget_key = 0
 
+    if "date_warning" not in st.session_state:
+        st.session_state.date_warning = ""
+
     def toggle_date(d):
+        if d < today:
+            st.session_state.date_warning = "今日より前の日付は選択できません。"
+            return
+
         if d in st.session_state.selected_dates:
             st.session_state.selected_dates.remove(d)
         else:
             st.session_state.selected_dates.append(d)
         st.session_state.selected_dates.sort()
+        st.session_state.date_warning = ""
 
     def register_attendance(start_time, end_time, tags):
         for d in st.session_state.selected_dates:
-            st.session_state.attendance_list.append({
-                "date": d,
-                "start": start_time,
-                "end": end_time,
-                "tags": tags
-            })
+            add_attendance(d, start_time, end_time, tags)
         st.session_state.selected_dates = []
         st.session_state.tags_widget_key += 1
 
-    def delete_attendance(index):
-        del st.session_state.attendance_list[index]
-
     st.title("出社登録")
+    if not profile["name"] or not profile["dept"]:
+        st.warning("先にプロフィールで名前と部署を保存してください。")
 
     with st.container(border=True):
         st.subheader("📅 出社日を選ぶ")
@@ -82,6 +91,9 @@ def render_register():
                             st.rerun()
                     else:
                         st.markdown("<div style='height:38px;'></div>", unsafe_allow_html=True)
+
+        if st.session_state.date_warning:
+            st.warning(st.session_state.date_warning)
 
         st.markdown("### 選択中の日付")
         if st.session_state.selected_dates:
@@ -120,14 +132,19 @@ def render_register():
 
         tags = st.pills(
             "目的タグ",
-            ["📦 ランチ可能", "💬 雑談歓迎", "🎯 作業メイン", "☕ コーヒー休憩"],
+            TAG_OPTIONS,
             selection_mode="multi",
-            key=f"tags_{st.session_state.tags_widget_key}"
+            default=profile["tags"],
+            key=f"tags_{st.session_state.tags_widget_key}",
         )
 
         if st.button("登録する", type="primary"):
-            if not st.session_state.selected_dates:
+            if not profile["name"] or not profile["dept"]:
+                st.warning("プロフィール設定後に登録してください")
+            elif not st.session_state.selected_dates:
                 st.warning("日付を選択してください")
+            elif any(d < today for d in st.session_state.selected_dates):
+                st.warning("今日より前の日付は登録できません。")
             elif start_time >= end_time:
                 st.warning("終了時間は開始時間より後にしてください")
             else:
@@ -137,15 +154,16 @@ def render_register():
 
     st.markdown("## 登録済み予定")
 
-    if st.session_state.attendance_list:
-        for i, item in enumerate(st.session_state.attendance_list):
+    attendance_list = get_attendance_list()
+    if attendance_list:
+        for i, item in enumerate(attendance_list):
             tags_text = " / ".join(item["tags"]) if item["tags"] else "タグなし"
 
             col1, col2 = st.columns([8, 1])
 
             with col1:
                 st.write(
-                    f"{item['date'].strftime('%Y/%m/%d')}　{item['start']} - {item['end']}　{tags_text}"
+                    f"{item['date'].strftime('%Y/%m/%d')}　{item['name']}（{item['dept']}）　{item['start']} - {item['end']}　{tags_text}"
                 )
 
             with col2:

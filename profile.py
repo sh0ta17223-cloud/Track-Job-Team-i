@@ -1,7 +1,11 @@
 import streamlit as st
+from data import TAG_OPTIONS, get_profile, init_data, save_profile
 
 
 def render_profile():
+    init_data()
+    profile = get_profile()
+
     st.title("プロフィール設定")
 
     left, right = st.columns([2, 1])
@@ -10,19 +14,23 @@ def render_profile():
         st.subheader("プロフィール登録")
 
         with st.container(border=True):
-            name = st.text_input("名前")
-            dept = st.text_input("部署")
-            color = st.color_picker("アバターカラー", "#D96A2B")
+            name = st.text_input("名前", value=profile["name"])
+            dept = st.text_input("部署", value=profile["dept"])
+            color = st.color_picker("アバターカラー", value=profile["color"])
 
             tags = st.pills(
                 "デフォルトの目的タグ（出社登録時に自動選択）",
-                ["📦 ランチ可能", "💬 雑談歓迎", "🎯 作業メイン", "☕ コーヒー休憩"],
+                TAG_OPTIONS,
                 selection_mode="multi",
-                default=["💬 雑談歓迎"]
+                default=profile["tags"],
             )
 
             if st.button("保存", width="stretch"):
-                st.success("保存しました")
+                if not name.strip() or not dept.strip() or not tags:
+                    st.warning("すべての項目を入力してから保存してください。")
+                else:
+                    save_profile(name, dept, color, tags)
+                    st.success("プロフィールを保存しました")
 
     avatar_text = name[0] if name else "？"
 
