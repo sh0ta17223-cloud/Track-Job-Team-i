@@ -154,14 +154,13 @@ with tab_home:
     for i, d in enumerate(dates):
         dow = DAY_JA[d.weekday()]
         is_active = d == st.session_state.selected_date
-        if is_active:
-            st.markdown(f"""<style>
-            div[data-testid="stHorizontalBlock"] > div:nth-child({i+1}) button {{
-                background:linear-gradient(135deg,#4A90D9,#5B6EE8) !important;
-                color:white !important; border-color:transparent !important; font-weight:700 !important;
-            }}</style>""", unsafe_allow_html=True)
         with cols[i]:
-            if st.button(f"{d.day}\n{dow}", key=f"home_date_{i}", use_container_width=True):
+            if st.button(
+                f"{d.day}\n{dow}",
+                key=f"home_date_{i}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
                 st.session_state.selected_date = d
                 st.rerun()
 
