@@ -2,6 +2,8 @@ import streamlit as st
 from home import render_home
 from register import render_register
 from profile import render_profile
+from storage import load_profile, load_attendance
+from db import init_db
 
 # ── ページ設定 ──
 st.set_page_config(
@@ -10,6 +12,14 @@ st.set_page_config(
     layout="centered",
 )
 
+init_db()
+
+if "profile" not in st.session_state:
+    st.session_state.profile = load_profile()
+
+if "attendance_list" not in st.session_state:
+    st.session_state.attendance_list = load_attendance()
+    
 # ── カスタムCSS ──
 st.markdown("""
 <style>

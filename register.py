@@ -1,25 +1,23 @@
 import streamlit as st
 import calendar
 from datetime import date
-from data import (
-    TAG_OPTIONS,
-    add_attendance,
-    delete_attendance,
-    get_attendance_list,
-    get_profile,
-    init_data,
-)
+from db import add_attendance, delete_attendance as db_delete_attendance, get_attendances
 
 
 def render_register():
-    init_data()
-    profile = get_profile()
+    # DBから最新の予定を読み込む
+    st.session_state.attendance_list = get_attendances()
+
     today = date.today()
+    profile = st.session_state.profile
     year = today.year
     month = today.month
 
     if "selected_dates" not in st.session_state:
         st.session_state.selected_dates = []
+
+    if "attendance_list" not in st.session_state:
+        st.session_state.attendance_list = []
 
     time_options = [f"{h:02d}:00" for h in range(9, 22)]
 
@@ -32,30 +30,38 @@ def render_register():
     if "tags_widget_key" not in st.session_state:
         st.session_state.tags_widget_key = 0
 
-    if "date_warning" not in st.session_state:
-        st.session_state.date_warning = ""
-
     def toggle_date(d):
-        if d < today:
-            st.session_state.date_warning = "今日より前の日付は選択できません。"
-            return
-
         if d in st.session_state.selected_dates:
             st.session_state.selected_dates.remove(d)
         else:
             st.session_state.selected_dates.append(d)
         st.session_state.selected_dates.sort()
-        st.session_state.date_warning = ""
 
     def register_attendance(start_time, end_time, tags):
+        profile_local = st.session_state.profile
+        final_tags = tags if tags else profile_local["tags"]
+
         for d in st.session_state.selected_dates:
-            add_attendance(d, start_time, end_time, tags)
+            item = {
+                "name": profile_local["name"] if profile_local["name"] else "未設定",
+                "dept": profile_local["dept"] if profile_local["dept"] else "未設定",
+                "color": profile_local["color"],
+                "date": d,
+                "start": start_time,
+                "end": end_time,
+                "tags": final_tags
+            }
+            add_attendance(item)
+
         st.session_state.selected_dates = []
         st.session_state.tags_widget_key += 1
+        st.session_state.attendance_list = get_attendances()
+
+    def delete_attendance_local(attendance_id):
+        db_delete_attendance(attendance_id)
+        st.session_state.attendance_list = get_attendances()
 
     st.title("出社登録")
-    if not profile["name"] or not profile["dept"]:
-        st.warning("先にプロフィールで名前と部署を保存してください。")
 
     with st.container(border=True):
         st.subheader("📅 出社日を選ぶ")
@@ -70,7 +76,7 @@ def render_register():
                 unsafe_allow_html=True
             )
 
-        cal = calendar.Calendar(firstweekday=6)
+        cal = calendar.Calendar(firstweekday=6)  # 日曜始まり
         weeks = cal.monthdatescalendar(year, month)
 
         for week in weeks:
@@ -90,10 +96,10 @@ def render_register():
                             toggle_date(d)
                             st.rerun()
                     else:
-                        st.markdown("<div style='height:38px;'></div>", unsafe_allow_html=True)
-
-        if st.session_state.date_warning:
-            st.warning(st.session_state.date_warning)
+                        st.markdown(
+                            "<div style='height:38px;'></div>",
+                            unsafe_allow_html=True
+                        )
 
         st.markdown("### 選択中の日付")
         if st.session_state.selected_dates:
@@ -120,6 +126,9 @@ def render_register():
         start_index = time_options.index(start_time)
         end_options = time_options[start_index + 1:]
 
+        if not end_options:
+            end_options = [start_time]
+
         if st.session_state.end_time not in end_options:
             st.session_state.end_time = end_options[0]
 
@@ -132,19 +141,15 @@ def render_register():
 
         tags = st.pills(
             "目的タグ",
-            TAG_OPTIONS,
+            ["📦 ランチ可能", "💬 雑談歓迎", "🎯 作業メイン", "☕ コーヒー休憩"],
             selection_mode="multi",
             default=profile["tags"],
-            key=f"tags_{st.session_state.tags_widget_key}",
+            key=f"tags_{st.session_state.tags_widget_key}"
         )
 
         if st.button("登録する", type="primary"):
-            if not profile["name"] or not profile["dept"]:
-                st.warning("プロフィール設定後に登録してください")
-            elif not st.session_state.selected_dates:
+            if not st.session_state.selected_dates:
                 st.warning("日付を選択してください")
-            elif any(d < today for d in st.session_state.selected_dates):
-                st.warning("今日より前の日付は登録できません。")
             elif start_time >= end_time:
                 st.warning("終了時間は開始時間より後にしてください")
             else:
@@ -154,21 +159,22 @@ def render_register():
 
     st.markdown("## 登録済み予定")
 
-    attendance_list = get_attendance_list()
-    if attendance_list:
-        for i, item in enumerate(attendance_list):
+    if st.session_state.attendance_list:
+        for item in st.session_state.attendance_list:
             tags_text = " / ".join(item["tags"]) if item["tags"] else "タグなし"
 
             col1, col2 = st.columns([8, 1])
 
             with col1:
                 st.write(
-                    f"{item['date'].strftime('%Y/%m/%d')}　{item['name']}（{item['dept']}）　{item['start']} - {item['end']}　{tags_text}"
+                    f"{item['date'].strftime('%Y/%m/%d')}　"
+                    f"{item['start']} - {item['end']}　"
+                    f"{item['name']}　{tags_text}"
                 )
 
             with col2:
-                if st.button("削除", key=f"delete_{i}"):
-                    delete_attendance(i)
+                if st.button("削除", key=f"delete_{item['id']}"):
+                    delete_attendance_local(item["id"])
                     st.rerun()
     else:
         st.info("まだ予定はありません")
